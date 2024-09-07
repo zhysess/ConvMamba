@@ -1,0 +1,56 @@
+{
+    "data_PU": {
+        "data_sign": "Pavia",
+        "data_file": "Pavia_30_3",
+        "patch_size": 15,
+        "batch_size": 32,
+        "num_classes": 9,
+        "pca": 30,
+        "spectral_size": 30,
+        "random_rotate": true
+    },
+
+    "data_IP": {
+        "data_sign": "Indian",
+        "data_file": "Indian_30_2",
+        "patch_size": 15,
+        "batch_size": 32,
+        "num_classes": 16,
+        "pca": 200,
+        "spectral_size": 200,
+        "random_rotate": true
+    },
+    
+    "data_HH": {
+        "data_sign": "Honghu",
+        "data_file": "Honghu_30_2",
+        "patch_size": 15,
+        "batch_size": 64,
+        "num_classes": 22,
+        "pca": 270,
+        "spectral_size": 270,
+        "random_rotate": true
+    },
+
+
+    "net": {
+        "trainer": "convmamba",
+        "depth": 4,
+        "dim": 64,
+        "kernal": 5,
+        "padding": 2
+    },
+
+    "mamba":{
+        "d_state": 24, 
+        "d_conv": 4, 
+        "expand": 1
+    },
+
+    "train": {
+        "epochs": 100,
+        "lr": 0.001,
+        "weight_decay": 0
+    }
+
+}
