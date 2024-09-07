@@ -129,7 +129,7 @@ def gen_per_class_pct(data_sign, data_path_prefix, real_pct):
     return target
 
 def run_temp():
-    signs = ['Indian', 'Pavia']
+    signs = ['Indian']
     data_path_prefix = '../data'
     if not os.path.exists(data_path_prefix):
         os.makedirs(data_path_prefix)
