@@ -54,7 +54,8 @@ def run_all():
         path_param = '%s/%s' % (config_path_prefix, name)
         with open(path_param, 'r') as fin:
             param = json.loads(fin.read())
-        dataset = ["Pavia", "Indian", "Honghu"]  # dataset, only supprot these three datasets
+        # dataset = ["Pavia", "Indian", "Honghu"]  # dataset, only supprot these three datasets
+        dataset = ["Indian"]
         for ds in dataset:
             if ds == "Honghu":
                 prefix = 'data_HH'
