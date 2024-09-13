@@ -320,7 +320,7 @@ class HSIDataLoader(object):
                                                 drop_last=False
                                                 )
         all_loader = torch.utils.data.DataLoader(dataset=allset,
-                                                batch_size=self.batch_size,
+                                                batch_size=512,
                                                 shuffle=False,
                                                 num_workers=0,
                                                 drop_last=False

@@ -19,124 +19,6 @@ def _weights_init(m):
     if isinstance(m, nn.Linear) or isinstance(m, nn.Conv3d):
         init.kaiming_normal_(m.weight)
 
-class Residual(nn.Module):
-    def __init__(self, fn):
-        super().__init__()
-        self.fn = fn
-
-    def forward(self, x, **kwargs):
-        return self.fn(x, **kwargs) + x
-
-class LayerNormalize(nn.Module):
-    def __init__(self, dim, fn):
-        super().__init__()
-        self.norm = nn.LayerNorm(dim)
-        self.fn = fn
-
-    def forward(self, x, **kwargs):
-        return self.fn(self.norm(x), **kwargs)
-
-
-class MLP_Block(nn.Module):
-    def __init__(self, dim, hidden_dim, dropout=0.1):
-        super().__init__()
-        self.net = nn.Sequential(
-            nn.Linear(dim, hidden_dim),
-            nn.GELU(),
-            nn.Dropout(dropout),
-            nn.Linear(hidden_dim, dim),
-            nn.Dropout(dropout)
-        )
-
-    def forward(self, x):
-        return self.net(x)
-
-class Attention(nn.Module):
-
-    def __init__(self, dim, heads, dim_heads, dropout):
-        super().__init__()
-        inner_dim = dim_heads * heads
-        self.heads = heads
-        self.scale = dim_heads ** -0.5
-
-        self.to_qkv = nn.Linear(dim, inner_dim * 3, bias = False)
-        self.to_out = nn.Sequential(
-            nn.Linear(inner_dim, dim),
-            nn.Dropout(dropout)
-        )
-    def forward(self, x, mask = None):
-        # x:[b,n,dim]
-        b, n, _, h = *x.shape, self.heads
-
-        # get qkv tuple:([b,n,head_num*head_dim],[...],[...])
-        qkv = self.to_qkv(x).chunk(3, dim = -1)
-        # split q,k,v from [b,n,head_num*head_dim] -> [b,head_num,n,head_dim]
-        q, k, v = map(lambda t: rearrange(t, 'b n (h d) -> b h n d', h = h), qkv)
-
-        # transpose(k) * q / sqrt(head_dim) -> [b,head_num,n,n]
-        dots = torch.einsum('bhid,bhjd->bhij', q, k) * self.scale
-        mask_value = -torch.finfo(dots.dtype).max
-
-        # mask value: -inf
-        if mask is not None:
-            mask = F.pad(mask.flatten(1), (1, 0), value = True)
-            assert mask.shape[-1] == dots.shape[-1], 'mask has incorrect dimensions'
-            mask = mask[:, None, :] * mask[:, :, None]
-            dots.masked_fill_(~mask, mask_value)
-            del mask
-
-        # softmax normalization -> attention matrix
-        attn = dots.softmax(dim=-1)
-        # value * attention matrix -> output
-        out = torch.einsum('bhij,bhjd->bhid', attn, v)
-        # cat all output -> [b, n, head_num*head_dim]
-        out = rearrange(out, 'b h n d -> b n (h d)')
-        out = self.to_out(out)
-        return out
-
-class Transformer(nn.Module):
-    def __init__(self, dim, depth, heads, dim_heads, mlp_dim, dropout):
-        super().__init__()
-        self.layers = nn.ModuleList([])
-        for _ in range(depth):
-            self.layers.append(nn.ModuleList([
-                Residual(LayerNormalize(dim, Attention(dim, heads=heads, dim_heads=dim_heads, dropout=dropout))),
-                Residual(LayerNormalize(dim, MLP_Block(dim, mlp_dim, dropout=dropout)))
-            ]))
-
-#    def forward(self, x, mask=None):
-#        for attention, mlp in self.layers:
-#            x = attention(x, mask=mask)  # go to attention
-#            x = mlp(x)  # go to MLP_Block
-#        return x
-
-
-    def forward(self, x, mask=None):
-        x_center = []
-        for attention, mlp in self.layers:
-            x = attention(x, mask=mask)  # go to attention
-            x = mlp(x)  # go to MLP_Block
-            index = int(x.shape[1] // 2)
-            x_center.append(x[:,index,:])  # x_center列表存储了每一层输出的中心位置的特征向量, [depth, batch_size, model_dim]
-        return x, x_center 
-
-
-
-class SE(nn.Module):
-
-    def __init__(self, in_chnls, ratio):
-        super(SE, self).__init__()
-        self.squeeze = nn.AdaptiveAvgPool2d((1, 1))
-        self.compress = nn.Conv2d(in_chnls, in_chnls//ratio, 1, 1, 0)
-        self.excitation = nn.Conv2d(in_chnls//ratio, in_chnls, 1, 1, 0)
-
-    def forward(self, x):
-        out = self.squeeze(x)
-        out = self.compress(out)
-        out = F.relu(out)
-        out = self.excitation(out)
-        return F.sigmoid(out)
-
 
 class Classifier(nn.Module):
     def __init__(self, params):
@@ -192,8 +74,6 @@ class Classifier(nn.Module):
             # nn.ReLU()
         )
 
-        self.senet = SE(conv2d_out, 5)
-
         self.cls_token_pixel = nn.Parameter(torch.randn(1, 1, dim))
         self.to_latent_pixel = nn.Identity()
 
@@ -223,22 +103,6 @@ class Classifier(nn.Module):
         x_pixel = rearrange(x_pixel, 'b h w s-> b s h w')
         return x_pixel
         
-    def get_position_embedding(self, x, center_index, cls_token=False):
-        center_h, center_w = center_index
-        b, s, h, w = x.shape
-        pos_index = []   # [h, w], 记录每个像素到中心像素的最大距离
-        for i in range(h):
-            temp_index = []
-            for j in range(w):
-                temp_index.append(max(abs(i-center_h), abs(j-center_w)))
-            pos_index.append(temp_index[:])
-        pos_index = np.asarray(pos_index)
-        # pos_index = np.max(pos_index) + 1 - pos_index
-        pos_index = pos_index.reshape(-1)
-        if cls_token:
-            pos_index = np.asarray([-1] + list(pos_index))
-        pos_emb = self.pixel_pos_embedding_relative[pos_index, :]
-        return pos_emb
     
     
     def encoder_block(self, x):
@@ -253,20 +117,14 @@ class Classifier(nn.Module):
         x_pixel = self.conv2d_features(x_pixel)  # 将patch embed
         x_pixel = rearrange(x_pixel, 'b s w h-> b (w h) s') # (batch, w*h, s)
         x_pixel = self.dropout(x_pixel)
-        x_pixel, x_center_list = self.local_trans_pixel(x_pixel)   #(batch, image_size, dim)
-        logit_x = x_center_list[-1]
+        x_pixel, x_center = self.local_trans_pixel(x_pixel)   #(batch, image_size, dim)
         reduce_x = torch.mean(x_pixel, dim=1)  # [batch_size, dim]
-        return logit_x, reduce_x
+        return x_center, reduce_x
 
-    def forward(self, x,left=None,right=None):
+    def forward(self, x):
         '''
         x: (batch, s, w, h), s=spectral, w=weigth, h=height
 
         '''
         logit_x, _ = self.encoder_block(x)
-        mean_left, mean_right = None, None
-        if left is not None and right is not None:
-            _, mean_left = self.encoder_block(left)
-            _, mean_right = self.encoder_block(right)
-
-        return  self.classifier_mlp(logit_x), mean_left, mean_right 
+        return  self.classifier_mlp(logit_x)

@@ -31,6 +31,7 @@ def train_by_param(param, path):
     np.save(os.path.join(path, "pred.npy"), y_pred_test)
     np.save(os.path.join(path, "gt.npy"), y_test)
     start_eval_time = time.time()
+    y_pred_test, y_test, eval_res = trainer.final_eval(all_loader)
     end_eval_time = time.time()
     eval_time = end_eval_time - start_eval_time
     print("eval time is %s" % eval_time)
@@ -54,7 +55,7 @@ def run_all():
         path_param = '%s/%s' % (config_path_prefix, name)
         with open(path_param, 'r') as fin:
             param = json.loads(fin.read())
-        dataset = ["Pavia", "Indian", "Honghu"]  # dataset, only supprot these three datasets
+        dataset = ["Pavia"]  # dataset, only supprot these three datasets
         for ds in dataset:
             if ds == "Honghu":
                 prefix = 'data_HH'

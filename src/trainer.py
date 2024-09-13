@@ -1,6 +1,4 @@
 import numpy as np
-import scipy.io as sio
-from sklearn.decomposition import PCA
 import torch
 import torch.nn as nn
 import torch.optim as optim
@@ -8,10 +6,6 @@ from models.pipeline import Classifier
 import utils
 from utils import recorder
 from evaluation import HSIEvaluation
-import itertools
-from sklearn import svm
-from sklearn.ensemble import RandomForestClassifier
-from sklearn.neighbors import KNeighborsClassifier
 from torch.utils.tensorboard import SummaryWriter
 from utils import device
 import copy
@@ -182,7 +176,7 @@ class MambaTrainer(BaseTrainer):
             B_vecs: [batch, dim]
             logits: [batch, class_num]
         '''
-        logits, A_vecs, B_vecs = outputs
+        logits = outputs
         
         loss_main = nn.CrossEntropyLoss()(logits, target) 
 
