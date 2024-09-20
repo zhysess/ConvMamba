@@ -91,19 +91,6 @@ class Classifier(nn.Module):
             nn.Linear(linear_dim, num_classes),
         )
     
-    def centerlize(self, x):
-        x = rearrange(x, 'b s h w-> b h w s')
-        b, h, w, s = x.shape
-        center_w = w // 2
-        center_h = h // 2
-        center_pixel = x[:,center_h, center_w, :]
-        center_pixel = torch.unsqueeze(center_pixel, 1)
-        center_pixel = torch.unsqueeze(center_pixel, 1)
-        x_pixel = x +  center_pixel
-        x_pixel = rearrange(x_pixel, 'b h w s-> b s h w')
-        return x_pixel
-        
-    
     
     def encoder_block(self, x):
         '''

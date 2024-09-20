@@ -19,8 +19,8 @@ model = ConvMamba(params=params, d_model=dim, depth=depth, patch_size=patch_size
 input  = torch.randn(1, 225, 64).cuda()
 flops, P = profile(model, inputs=(input, ))
 
-print('flops: ', flops / 1e9, 'G')
-print('params: ', P / 1e6, 'M')
+# print('flops: ', flops / 1e9, 'G')
+# print('params: ', P / 1e6, 'M')
 
 pipeline = Classifier(params=params).cuda()
 input  = torch.randn(1, 30, 15, 15).cuda()

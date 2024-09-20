@@ -1,7 +1,7 @@
 {
     "data_PU": {
+        "data_path_prefix": "../data",
         "data_sign": "Pavia",
-        "data_file": "Pavia_30_3",
         "patch_size": 15,
         "batch_size": 32,
         "num_classes": 9,
@@ -11,8 +11,8 @@
     },
 
     "data_IP": {
+        "data_path_prefix": "../data",
         "data_sign": "Indian",
-        "data_file": "Indian_30_2",
         "patch_size": 15,
         "batch_size": 32,
         "num_classes": 16,
@@ -22,8 +22,8 @@
     },
     
     "data_HH": {
+        "data_path_prefix": "../data",
         "data_sign": "Honghu",
-        "data_file": "Honghu_30_2",
         "patch_size": 15,
         "batch_size": 64,
         "num_classes": 22,

@@ -9,6 +9,8 @@ from evaluation import HSIEvaluation
 from torch.utils.tensorboard import SummaryWriter
 from utils import device
 import copy
+import time
+import os 
 
 
 class BaseTrainer(object):
@@ -25,7 +27,9 @@ class BaseTrainer(object):
         self.clip = 15
         self.unlabel_loader=None
         self.real_init()
-        self.best_model_path = f"./weight/{self.params['data']['data_sign']}_best_model.pth"  # 保存最好的模型的路径
+        save_weight = './weight'
+        os.makedirs(save_weight, exist_ok=True)
+        self.best_model_path = os.path.join(save_weight, f"{self.params['data']['data_sign']}_best_model.pth")  # 保存最好的模型的路径
 
     def real_init(self):
         pass
@@ -86,9 +90,12 @@ class BaseTrainer(object):
 
     def final_eval(self, test_loader):
         self.net.load_state_dict(torch.load(self.best_model_path))
+        start_eval_time = time.time()
         y_pred_test, y_test = self.all_test(test_loader)
-        temp_res = self.evalator.eval(y_test, y_pred_test)
-        return y_pred_test, y_test, temp_res
+        end_eval_time = time.time()
+        eval_time = end_eval_time - start_eval_time
+        # temp_res = self.evalator.eval(y_test, y_pred_test)
+        return y_pred_test, y_test, eval_time
 
     def get_logits(self, output):
         if type(output) == tuple:
